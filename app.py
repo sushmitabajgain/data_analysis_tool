@@ -1,21 +1,16 @@
 from flask import Flask, render_template
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 
-# Generate sample data
+# Sample data generation function
 def generate_sample_data():
-    # Create a date range for the past 12 months
-    date_range = pd.date_range(start='2023-01-01', periods=12, freq='M')
-    
-    # Generate random sales data
-    np.random.seed(0)  # For reproducibility
-    sales_data = np.random.randint(1000, 5000, size=12)  # Random sales amounts
-    
-    # Create a DataFrame
-    data = pd.DataFrame({'PurchaseDate': date_range, 'Amount': sales_data})
+    np.random.seed(0)
+    dates = pd.date_range(start='2023-01-01', periods=100, freq='D')
+    amounts = np.random.randint(1, 100, size=len(dates))  # Random amounts
+    data = pd.DataFrame({'PurchaseDate': dates, 'Amount': amounts})
     return data
 
 @app.route('/')
@@ -23,8 +18,11 @@ def index():
     # Generate sample data
     data = generate_sample_data()
 
-    # Group by month and sum the Amount
-    monthly_sales = data.groupby(data['PurchaseDate'].dt.to_period('M')).sum(numeric_only=True)
+    # Ensure 'Amount' is numeric
+    data['Amount'] = pd.to_numeric(data['Amount'], errors='coerce')
+
+    # Use resampling to sum monthly sales
+    monthly_sales = data.set_index('PurchaseDate').resample('M').sum()['Amount']
 
     # Plot monthly sales trend and save as PNG
     monthly_sales_fig = monthly_sales.plot(kind='line', title='Monthly Sales Trend', marker='o').get_figure()
@@ -35,5 +33,5 @@ def index():
 
     return render_template("index.html", image="static/monthly_sales.png")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
